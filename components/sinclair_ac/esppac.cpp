@@ -201,5 +201,53 @@ void SinclairAC::log_packet(std::vector<uint8_t> data, bool outgoing) {
     ESP_LOGV(TAG, "%s: %s", outgoing ? "TX" : "RX", format_hex_pretty(data).c_str());
 }
 
+void SinclairAC::set_plasma_switch(switch_::Switch *plasma_switch) {
+    this->plasma_switch_ = plasma_switch;
+    this->plasma_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->plasma_state_) return;
+        this->on_plasma_change(state);
+    });
+}
+
+void SinclairAC::set_beeper_switch(switch_::Switch *beeper_switch) {
+    this->beeper_switch_ = beeper_switch;
+    this->beeper_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->beeper_state_) return;
+        this->on_beeper_change(state);
+    });
+}
+
+void SinclairAC::set_sleep_switch(switch_::Switch *sleep_switch) {
+    this->sleep_switch_ = sleep_switch;
+    this->sleep_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->sleep_state_) return;
+        this->on_sleep_change(state);
+    });
+}
+
+void SinclairAC::set_xfan_switch(switch_::Switch *xfan_switch) {
+    this->xfan_switch_ = xfan_switch;
+    this->xfan_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->xfan_state_) return;
+        this->on_xfan_change(state);
+    });
+}
+
+void SinclairAC::set_save_switch(switch_::Switch *save_switch) {
+    this->save_switch_ = save_switch;
+    this->save_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->save_state_) return;
+        this->on_save_change(state);
+    });
+}
+
+void SinclairAC::set_current_temperature_sensor(sensor::Sensor *current_temperature_sensor) {
+    this->current_temperature_sensor_ = current_temperature_sensor;
+    this->current_temperature_sensor_->add_on_state_callback([this](float state) {
+        if (std::isnan(state)) return;
+        this->update_current_temperature(state);
+    });
+}
+
 }  // namespace sinclair_ac
 }  // namespace esphome

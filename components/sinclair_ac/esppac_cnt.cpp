@@ -41,6 +41,67 @@ bool SinclairACCNT::processUnitReport() {
     return hasChanged;
 }
 
+void SinclairACCNT::setup() {
+    SinclairAC::setup();
+}
+
+void SinclairACCNT::loop() {
+    SinclairAC::loop();
+}
+
+void SinclairACCNT::control(const climate::ClimateCall &call) {
+    if (call.get_mode().has_value())
+        this->mode = *call.get_mode();
+    if (call.get_target_temperature().has_value())
+        this->target_temperature = *call.get_target_temperature();
+    if (call.get_fan_mode().has_value())
+        this->fan_mode = *call.get_fan_mode();
+    if (call.get_swing_mode().has_value())
+        this->swing_mode = *call.get_swing_mode();
+    if (call.get_custom_fan_mode().has_value())
+        this->custom_fan_mode = *call.get_custom_fan_mode();
+    if (call.get_preset().has_value())
+        this->preset = *call.get_preset();
+        
+    this->send_packet();
+}
+
+void SinclairACCNT::on_horizontal_swing_change(const std::string &swing) {
+    this->send_packet();
+}
+
+void SinclairACCNT::on_vertical_swing_change(const std::string &swing) {
+    this->send_packet();
+}
+
+void SinclairACCNT::on_display_change(const std::string &display) {
+    this->send_packet();
+}
+
+void SinclairACCNT::on_display_unit_change(const std::string &display_unit) {
+    this->send_packet();
+}
+
+void SinclairACCNT::on_plasma_change(bool plasma) {
+    this->send_packet();
+}
+
+void SinclairACCNT::on_beeper_change(bool beeper) {
+    this->send_packet();
+}
+
+void SinclairACCNT::on_sleep_change(bool sleep) {
+    this->send_packet();
+}
+
+void SinclairACCNT::on_xfan_change(bool xfan) {
+    this->send_packet();
+}
+
+void SinclairACCNT::on_save_change(bool save) {
+    this->send_packet();
+}
+
 } // namespace CNT
 } // namespace sinclair_ac
 } // namespace esphome
