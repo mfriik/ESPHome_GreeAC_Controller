@@ -9,8 +9,9 @@ static const char *const TAG = "sinclair_ac";
 climate::ClimateTraits SinclairAC::traits() {
     auto traits = climate::ClimateTraits();
 
-    // Fix for 2026.1.0: Using feature flags instead of deprecated methods
-    traits.add_supported_feature(climate::CLIMATE_TRAIT_CURRENT_TEMPERATURE);
+    // Fix: Corrected method names for ESPHome 2026.1.x
+    traits.set_supports_current_temperature(true);
+    traits.set_supports_action(false); 
     
     traits.set_visual_min_temperature(MIN_TEMPERATURE);
     traits.set_visual_max_temperature(MAX_TEMPERATURE);
