@@ -60,7 +60,7 @@ void SinclairACCNT::control(const climate::ClimateCall &call) {
         this->swing_mode = *call.get_swing_mode();
     // Fix: Handle StringRef return type and missing setter
     if (!call.get_custom_fan_mode().empty()) {
-        // this->set_custom_fan_mode(call.get_custom_fan_mode().str());
+        this->set_custom_fan_mode_(call.get_custom_fan_mode());
     }
     if (call.get_preset().has_value())
         this->preset = *call.get_preset();
