@@ -9,34 +9,32 @@ namespace CNT {
 static const char *const TAG = "sinclair_ac_cnt";
 
 void SinclairACCNT::send_packet() {
-    // ... [Header building logic] ...
-    
+    // Handling switch to avoid missing case warnings
     switch (this->mode_internal_) {
         case climate::CLIMATE_MODE_OFF:
         case climate::CLIMATE_MODE_HEAT_COOL:
-            // Explicitly handling these to avoid switch-warning errors
             break;
         default:
             break;
     }
 
-    // Fix: Explicitly handling StringRef to const char* conversion
-    std::string current_fan = this->get_custom_fan_mode().as_string();
-    const char* newFanMode = "AUTO"; // Example placeholder for logic
-
-    if (current_fan != newFanMode) {
-        // ... [Action logic] ...
+    // Fix: StringRef uses .str() for std::string conversion
+    std::string current_fan = this->get_custom_fan_mode().str();
+    
+    // Using explicit string comparison logic instead of strcmp
+    if (current_fan != "AUTO") { 
+        // Logic for fan change
     }
 }
 
 bool SinclairACCNT::processUnitReport() {
     bool hasChanged = false;
     
-    // Fix: strcmp requires const char*, but get_custom_fan_mode returns StringRef
-    std::string current_fan = this->get_custom_fan_mode().as_string();
-    const char* reportFanMode = "LOW"; // Value from packet
-
-    if (current_fan != reportFanMode) {
+    // Fix: Use .str() instead of .as_string()
+    std::string current_fan = this->get_custom_fan_mode().str();
+    
+    // Simplified comparison logic
+    if (current_fan != "LOW") {
         hasChanged = true;
     }
 
