@@ -9,36 +9,110 @@ namespace CNT {
 static const char *const TAG = "sinclair_ac_cnt";
 
 void SinclairACCNT::send_packet() {
-    // Handling switch to avoid missing case warnings
-    switch (this->mode_internal_) {
-        case climate::CLIMATE_MODE_OFF:
-        case climate::CLIMATE_MODE_HEAT_COOL:
-            break;
-        default:
-            break;
+    uint8_t packet[47];
+    memset(packet, 0, sizeof(packet));
+
+    packet[0] = 0x7E;
+    packet[1] = 0x7E;
+    packet[2] = 45; // Length
+    packet[3] = protocol::CMD_OUT_PARAMS_SET; // 0x01
+
+    // Set Power
+    if (this->mode != climate::CLIMATE_MODE_OFF) {
+        packet[4 + protocol::REPORT_PWR_BYTE] |= protocol::REPORT_PWR_MASK;
     }
 
-    // Fix: StringRef uses .str() for std::string conversion
-    std::string current_fan = this->get_custom_fan_mode().str();
-    
-    // Using explicit string comparison logic instead of strcmp
-    if (current_fan != "AUTO") { 
-        // Logic for fan change
+    // Set Mode
+    uint8_t mode_byte = protocol::REPORT_MODE_AUTO;
+    switch (this->mode) {
+        case climate::CLIMATE_MODE_COOL: mode_byte = protocol::REPORT_MODE_COOL; break;
+        case climate::CLIMATE_MODE_DRY: mode_byte = protocol::REPORT_MODE_DRY; break;
+        case climate::CLIMATE_MODE_HEAT: mode_byte = protocol::REPORT_MODE_HEAT; break;
+        case climate::CLIMATE_MODE_FAN_ONLY: mode_byte = protocol::REPORT_MODE_FAN; break;
+        case climate::CLIMATE_MODE_AUTO: default: mode_byte = protocol::REPORT_MODE_AUTO; break;
     }
+    packet[4 + protocol::REPORT_MODE_BYTE] |= (mode_byte << protocol::REPORT_MODE_POS);
+
+    // Set Temperature
+    int temp = (int)this->target_temperature;
+    packet[4 + protocol::REPORT_TEMP_SET_BYTE] |= ((temp + protocol::REPORT_TEMP_SET_OFF) << protocol::REPORT_TEMP_SET_POS);
+
+    // Set Fan
+    std::string current_fan = this->get_custom_fan_mode().str();
+    uint8_t fan_byte = 0;
+    if (current_fan == "1 - Low") fan_byte = 1;
+    else if (current_fan == "2 - Medium") fan_byte = 2;
+    else if (current_fan == "3 - High") fan_byte = 3;
+    
+    if (current_fan == "0 - Auto" || current_fan.empty()) {
+        // Auto fan logic if needed, usually 0
+    } else if (current_fan == "4 - Turbo") {
+        packet[4 + protocol::REPORT_FAN_TURBO_BYTE] |= protocol::REPORT_FAN_TURBO_MASK;
+        fan_byte = 3; // Turbo often implies high fan speed + turbo bit
+    }
+    packet[4 + protocol::REPORT_FAN_SPD1_BYTE] |= (fan_byte & protocol::REPORT_FAN_SPD1_MASK);
+
+    // Set Swing
+    if (this->swing_mode == climate::CLIMATE_SWING_VERTICAL || this->swing_mode == climate::CLIMATE_SWING_BOTH) {
+        packet[4 + protocol::REPORT_VSWING_BYTE] |= (protocol::REPORT_VSWING_FULL << protocol::REPORT_VSWING_POS);
+    }
+    if (this->swing_mode == climate::CLIMATE_SWING_HORIZONTAL || this->swing_mode == climate::CLIMATE_SWING_BOTH) {
+        packet[4 + protocol::REPORT_HSWING_BYTE] |= (protocol::REPORT_HSWING_FULL << protocol::REPORT_HSWING_POS);
+    }
+
+    // Calculate Checksum
+    uint8_t checksum = 0;
+    for (int i = 2; i < 46; i++) {
+        checksum += packet[i];
+    }
+    packet[46] = checksum;
+
+    this->write_array(packet, 47);
+    this->log_packet(std::vector<uint8_t>(packet, packet + 47), true);
 }
 
 bool SinclairACCNT::processUnitReport() {
-    bool hasChanged = false;
-    
-    // Fix: Use .str() instead of .as_string()
-    std::string current_fan = this->get_custom_fan_mode().str();
-    
-    // Simplified comparison logic
-    if (current_fan != "LOW") {
-        hasChanged = true;
+    if (this->serialProcess_.data.size() < 47) return false;
+
+    // Verify Checksum
+    uint8_t checksum = 0;
+    for (size_t i = 2; i < this->serialProcess_.data.size() - 1; i++) {
+        checksum += this->serialProcess_.data[i];
+    }
+    if (checksum != this->serialProcess_.data.back()) {
+        ESP_LOGW(TAG, "Checksum mismatch");
+        return false;
     }
 
-    return hasChanged;
+    // Log received packet
+    this->log_packet(this->serialProcess_.data, false);
+
+    // Parse Power
+    bool power = (this->serialProcess_.data[4 + protocol::REPORT_PWR_BYTE] & protocol::REPORT_PWR_MASK);
+    this->mode = power ? climate::CLIMATE_MODE_COOL : climate::CLIMATE_MODE_OFF; // Simplified, needs full mode mapping
+
+    // Parse Mode if powered on
+    if (power) {
+        uint8_t mode_byte = (this->serialProcess_.data[4 + protocol::REPORT_MODE_BYTE] & protocol::REPORT_MODE_MASK) >> protocol::REPORT_MODE_POS;
+        switch (mode_byte) {
+            case protocol::REPORT_MODE_COOL: this->mode = climate::CLIMATE_MODE_COOL; break;
+            case protocol::REPORT_MODE_HEAT: this->mode = climate::CLIMATE_MODE_HEAT; break;
+            case protocol::REPORT_MODE_DRY: this->mode = climate::CLIMATE_MODE_DRY; break;
+            case protocol::REPORT_MODE_FAN: this->mode = climate::CLIMATE_MODE_FAN_ONLY; break;
+            case protocol::REPORT_MODE_AUTO: this->mode = climate::CLIMATE_MODE_AUTO; break;
+        }
+    }
+
+    // Parse Temperature
+    uint8_t temp_raw = (this->serialProcess_.data[4 + protocol::REPORT_TEMP_SET_BYTE] & protocol::REPORT_TEMP_SET_MASK) >> protocol::REPORT_TEMP_SET_POS;
+    this->target_temperature = temp_raw - protocol::REPORT_TEMP_SET_OFF;
+
+    // Parse Current Temperature
+    uint8_t curr_temp_raw = this->serialProcess_.data[4 + protocol::REPORT_TEMP_ACT_BYTE];
+    this->current_temperature = (curr_temp_raw - protocol::REPORT_TEMP_ACT_OFF) / protocol::REPORT_TEMP_ACT_DIV;
+
+    this->publish_state();
+    return true;
 }
 
 void SinclairACCNT::setup() {
@@ -47,6 +121,13 @@ void SinclairACCNT::setup() {
 
 void SinclairACCNT::loop() {
     SinclairAC::loop();
+    if (this->serialProcess_.state == STATE_COMPLETE) {
+        if (this->serialProcess_.data.size() > 0 && this->serialProcess_.data[3] == protocol::CMD_IN_UNIT_REPORT) {
+            this->processUnitReport();
+        }
+        this->serialProcess_.state = STATE_WAIT_SYNC;
+        this->serialProcess_.data.clear();
+    }
 }
 
 void SinclairACCNT::control(const climate::ClimateCall &call) {
