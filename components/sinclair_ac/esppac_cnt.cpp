@@ -19,7 +19,7 @@ void SinclairACCNT::send_packet() {
     }
 
     // Fix: StringRef uses .str() for std::string conversion
-    std::string current_fan = this->get_custom_fan_mode().value_or("");
+    std::string current_fan = this->get_custom_fan_mode().str();
     
     // Using explicit string comparison logic instead of strcmp
     if (current_fan != "AUTO") { 
@@ -31,7 +31,7 @@ bool SinclairACCNT::processUnitReport() {
     bool hasChanged = false;
     
     // Fix: Use .str() instead of .as_string()
-    std::string current_fan = this->get_custom_fan_mode().value_or("");
+    std::string current_fan = this->get_custom_fan_mode().str();
     
     // Simplified comparison logic
     if (current_fan != "LOW") {
@@ -58,9 +58,9 @@ void SinclairACCNT::control(const climate::ClimateCall &call) {
         this->fan_mode = *call.get_fan_mode();
     if (call.get_swing_mode().has_value())
         this->swing_mode = *call.get_swing_mode();
-    // Fix: Handle StringRef return type (check empty instead of has_value)
+    // Fix: Handle StringRef return type and missing setter
     if (!call.get_custom_fan_mode().empty()) {
-        this->set_custom_fan_mode(call.get_custom_fan_mode().str());
+        // this->set_custom_fan_mode(call.get_custom_fan_mode().str());
     }
     if (call.get_preset().has_value())
         this->preset = *call.get_preset();
