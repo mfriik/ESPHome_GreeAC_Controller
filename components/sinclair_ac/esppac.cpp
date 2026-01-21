@@ -163,8 +163,7 @@ climate::ClimateAction SinclairAC::determine_action() {
 
 void SinclairAC::set_vertical_swing_select(select::Select *vertical_swing_select) {
     this->vertical_swing_select_ = vertical_swing_select;
-    this->vertical_swing_select_->add_on_state_callback([this](size_t index) {
-        const std::string &value = this->vertical_swing_select_->current_option();
+    this->vertical_swing_select_->add_on_state_callback([this](std::string value, size_t index) {
         if (value == this->vertical_swing_state_) return;
         this->on_vertical_swing_change(value);
     });
@@ -172,8 +171,7 @@ void SinclairAC::set_vertical_swing_select(select::Select *vertical_swing_select
 
 void SinclairAC::set_horizontal_swing_select(select::Select *horizontal_swing_select) {
     this->horizontal_swing_select_ = horizontal_swing_select;
-    this->horizontal_swing_select_->add_on_state_callback([this](size_t index) {
-        const std::string &value = this->horizontal_swing_select_->current_option();
+    this->horizontal_swing_select_->add_on_state_callback([this](std::string value, size_t index) {
         if (value == this->horizontal_swing_state_) return;
         this->on_horizontal_swing_change(value);
     });
@@ -181,8 +179,7 @@ void SinclairAC::set_horizontal_swing_select(select::Select *horizontal_swing_se
 
 void SinclairAC::set_display_select(select::Select *display_select) {
     this->display_select_ = display_select;
-    this->display_select_->add_on_state_callback([this](size_t index) {
-        const std::string &value = this->display_select_->current_option();
+    this->display_select_->add_on_state_callback([this](std::string value, size_t index) {
         if (value == this->display_state_) return;
         this->on_display_change(value);
     });
@@ -190,8 +187,7 @@ void SinclairAC::set_display_select(select::Select *display_select) {
 
 void SinclairAC::set_display_unit_select(select::Select *display_unit_select) {
     this->display_unit_select_ = display_unit_select;
-    this->display_unit_select_->add_on_state_callback([this](size_t index) {
-        const std::string &value = this->display_unit_select_->current_option();
+    this->display_unit_select_->add_on_state_callback([this](std::string value, size_t index) {
         if (value == this->display_unit_state_) return;
         this->on_display_unit_change(value);
     });

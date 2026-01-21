@@ -19,7 +19,7 @@ void SinclairACCNT::send_packet() {
     }
 
     // Fix: StringRef uses .str() for std::string conversion
-    std::string current_fan = this->get_custom_fan_mode().str();
+    std::string current_fan = this->custom_fan_mode.value_or("");
     
     // Using explicit string comparison logic instead of strcmp
     if (current_fan != "AUTO") { 
@@ -31,7 +31,7 @@ bool SinclairACCNT::processUnitReport() {
     bool hasChanged = false;
     
     // Fix: Use .str() instead of .as_string()
-    std::string current_fan = this->get_custom_fan_mode().str();
+    std::string current_fan = this->custom_fan_mode.value_or("");
     
     // Simplified comparison logic
     if (current_fan != "LOW") {
